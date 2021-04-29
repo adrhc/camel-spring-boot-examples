@@ -16,10 +16,15 @@
  */
 package sample.camel;
 
+import org.apache.camel.component.seda.LinkedBlockingQueueFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+
+import java.util.concurrent.SynchronousQueue;
 
 //CHECKSTYLE:OFF
+
 /**
  * A sample Spring Boot application that starts the Camel routes.
  */
@@ -33,5 +38,27 @@ public class Application {
         SpringApplication.run(Application.class, args);
     }
 
+    /*@Bean
+    CamelContextConfiguration camelContextConfiguration() {
+        return new CamelContextConfiguration() {
+            @Override
+            public void beforeApplicationStart(CamelContext camelContext) {
+                SedaComponent sedaComponent = new SedaComponent();
+                sedaComponent.setQueueSize(1);
+                sedaComponent.setDefaultBlockWhenFull(true);
+                camelContext.addComponent("synchronousQueue", sedaComponent);
+            }
+
+            @Override
+            public void afterApplicationStart(CamelContext camelContext) {
+                // do nothing
+            }
+        };
+    }*/
+
+    @Bean
+    SynchronousQueue<Object> synchronousQueue() {
+        return new SynchronousQueue<>();
+    }
 }
 //CHECKSTYLE:ON
