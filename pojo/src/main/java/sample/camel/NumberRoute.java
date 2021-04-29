@@ -90,7 +90,7 @@ public class NumberRoute extends RouteBuilder {
                 .setBody(spel("#{new sample.camel.FullLine(body[1], body[0])}"))
                 .otherwise()
 //                .setProperty("choice", spel("#{body[0]}: NULL}"))
-                .setBody(spel("#{new sample.camel.IncompleteLine(body[1])}"))
+                .setBody(spel("#{new sample.camel.IncompleteLine(body[0])}"))
                 .end() // choice on body.size
 
                 // line converted to POJO
