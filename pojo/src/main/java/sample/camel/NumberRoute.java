@@ -70,6 +70,64 @@ public class NumberRoute extends RouteBuilder {
 //                .unmarshal().bindy(BindyType.Csv, Person.class)
 
                 .setProperty("type", simple("line index ${exchangeProperty.CamelSplitIndex}"))
+                .to(DEBUG_ALL)
+
+                // split by , for getting CSV parts
+                .setProperty("lineIndex", simple("${exchangeProperty.CamelSplitIndex}"))
+                .split(body().tokenize(","), flexible().accumulateInCollection(ArrayList.class))
+
+                .setProperty("type", simple("CSV part index ${exchangeProperty.CamelSplitIndex}"))
+                .to(DEBUG_ALL)
+                .end() // split by , for getting CSV parts
+
+//                .delay(4000)
+
+                // line converted to Array containing CSV parts
+                .setProperty("type", simple("line index ${exchangeProperty.lineIndex} converted to CSV parts Array"))
+                .to(DEBUG_ALL)
+
+                .end() // split by \n for getting lines in chunk
+
+                // lines from chunk grouped (Array lines each containing CSV parts Array)
+                .removeProperty("lineIndex")
+                .setProperty("type", constant(CHUNK_SIZE + " lines from chunk grouped"))
+                .to(DEBUG_ALL)
+
+                /*.process(exchange -> {
+                    Exchange ex = exchange;
+                })*/
+
+                .choice()
+                .when(simple("${body.size()} > 1"))
+                .log("body.size: ${body.size()} full")
+                .otherwise()
+                .log("body.size: ${body.size()} incomplete")
+                .end() // choice on body.size
+
+                .end() // split by \n for getting all chunks
+
+                .setProperty("type", constant("all chunks concatenated"))
+                .to(DEBUG_ALL);
+    }
+
+    /**
+     * closest approach
+     */
+    public void configure6() {
+        from("direct:start")
+                .log("\n[threadName = ${threadName}] from direct-start:\n${body.length}")
+
+                // split by \n for getting chunks
+                .split().tokenize("\n", CHUNK_SIZE).streaming()
+                .log("\n[threadName = ${threadName}] chunk ${exchangeProperty.CamelSplitIndex} lines:\n${body}")
+
+                // split by \n for getting lines in chunk
+                .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
+                .executorService(() -> Executors.newFixedThreadPool(THREADS))
+
+//                .unmarshal().bindy(BindyType.Csv, Person.class)
+
+                .setProperty("type", simple("line index ${exchangeProperty.CamelSplitIndex}"))
 //                .log("\n[threadName = ${threadName}] a line in chunk ${exchangeProperty.CamelSplitIndex}:\n${body}")
                 .to(DEBUG_ALL)
 
