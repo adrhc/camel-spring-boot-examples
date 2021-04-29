@@ -30,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 
 import static org.apache.camel.builder.AggregationStrategies.flexible;
+import static org.apache.camel.language.spel.SpelExpression.spel;
 import static sample.camel.AppUtils.lines;
 import static sample.camel.SlowService.createSlowService;
 
@@ -82,27 +83,32 @@ public class NumberRoute extends RouteBuilder {
 
 //                .delay(4000)
 
-                // line converted to Array containing CSV parts
-                .setProperty("type", simple("line index ${exchangeProperty.lineIndex} converted to CSV parts Array"))
+                .log("body.size: ${body.size()} full")
+                .choice()
+                .when(simple("${body.size()} > 1"))
+//                .setProperty("choice", spel("#{body[0]}: #{body[1]}"))
+                .setBody(spel("#{new sample.camel.FullLine(body[1], body[0])}"))
+                .otherwise()
+//                .setProperty("choice", spel("#{body[0]}: NULL}"))
+                .setBody(spel("#{new sample.camel.IncompleteLine(body[1])}"))
+                .end() // choice on body.size
+
+                // line converted to POJO
+                .setProperty("type", constant("line converted to POJO"))
+                .setProperty("className", spel("#{body.getClass().getName()}"))
                 .to(DEBUG_ALL)
+                .removeProperty("choice")
 
                 .end() // split by \n for getting lines in chunk
 
                 // lines from chunk grouped (Array lines each containing CSV parts Array)
                 .removeProperty("lineIndex")
-                .setProperty("type", constant(CHUNK_SIZE + " lines from chunk grouped"))
+                .setProperty("type", simple("${body.size()} lines from chunk grouped"))
                 .to(DEBUG_ALL)
 
                 /*.process(exchange -> {
                     Exchange ex = exchange;
                 })*/
-
-                .choice()
-                .when(simple("${body.size()} > 1"))
-                .log("body.size: ${body.size()} full")
-                .otherwise()
-                .log("body.size: ${body.size()} incomplete")
-                .end() // choice on body.size
 
                 .end() // split by \n for getting all chunks
 

@@ -17,6 +17,6 @@ public class AppRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        template.sendBody("direct:start", lines(80));
+        template.sendBody("direct:start", lines(40));
     }
 }
