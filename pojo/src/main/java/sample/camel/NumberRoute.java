@@ -60,13 +60,15 @@ public class NumberRoute extends RouteBuilder {
         from("direct:start")
                 .log("\n[threadName = ${threadName}] from direct-start:\n${body.length}")
 
-                // split by \n for getting chunks
+                // split by \n for getting all chunks
                 .split().tokenize("\n", CHUNK_SIZE).streaming()
+                .setProperty("chunk", simple("${exchangeProperty.CamelSplitIndex}"))
                 .log("\n[threadName = ${threadName}] chunk ${exchangeProperty.CamelSplitIndex} lines:\n${body}")
 
                 // split by \n for getting lines in chunk
                 .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
                 .executorService(() -> Executors.newFixedThreadPool(THREADS))
+                .setProperty("line", simple("${exchangeProperty.CamelSplitIndex}"))
 
 //                .unmarshal().bindy(BindyType.Csv, Person.class)
 
@@ -74,7 +76,6 @@ public class NumberRoute extends RouteBuilder {
                 .to(DEBUG_ALL)
 
                 // split by , for getting CSV parts
-                .setProperty("lineIndex", simple("${exchangeProperty.CamelSplitIndex}"))
                 .split(body().tokenize(","), flexible().accumulateInCollection(ArrayList.class))
 
                 .setProperty("type", simple("CSV part index ${exchangeProperty.CamelSplitIndex}"))
@@ -94,15 +95,14 @@ public class NumberRoute extends RouteBuilder {
                 .end() // choice on body.size
 
                 // line converted to POJO
-                .setProperty("type", constant("line converted to POJO"))
-                .setProperty("className", spel("#{body.getClass().getName()}"))
+                .setProperty("type", spel("line converted to #{body.getClass().getName()}"))
                 .to(DEBUG_ALL)
-                .removeProperty("choice")
+//                .removeProperty("choice")
 
                 .end() // split by \n for getting lines in chunk
 
                 // chunk's lines grouped (Array lines each containing a POJO)
-                .removeProperty("lineIndex")
+                .removeProperty("line")
                 .setProperty("type", simple("${body.size()} lines from chunk grouped"))
                 .to(DEBUG_ALL)
 
@@ -123,7 +123,7 @@ public class NumberRoute extends RouteBuilder {
         from("direct:start")
                 .log("\n[threadName = ${threadName}] from direct-start:\n${body.length}")
 
-                // split by \n for getting chunks
+                // split by \n for getting all chunks
                 .split().tokenize("\n", CHUNK_SIZE).streaming()
                 .log("\n[threadName = ${threadName}] chunk ${exchangeProperty.CamelSplitIndex} lines:\n${body}")
 
