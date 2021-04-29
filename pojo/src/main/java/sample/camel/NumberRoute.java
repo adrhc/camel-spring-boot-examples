@@ -83,7 +83,7 @@ public class NumberRoute extends RouteBuilder {
 
 //                .delay(4000)
 
-                .log("body.size: ${body.size()} full")
+//                .log("body.size: ${body.size()} full")
                 .choice()
                 .when(simple("${body.size()} > 1"))
 //                .setProperty("choice", spel("#{body[0]}: #{body[1]}"))
@@ -101,7 +101,7 @@ public class NumberRoute extends RouteBuilder {
 
                 .end() // split by \n for getting lines in chunk
 
-                // lines from chunk grouped (Array lines each containing CSV parts Array)
+                // chunk's lines grouped (Array lines each containing a POJO)
                 .removeProperty("lineIndex")
                 .setProperty("type", simple("${body.size()} lines from chunk grouped"))
                 .to(DEBUG_ALL)

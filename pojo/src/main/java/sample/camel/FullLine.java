@@ -1,7 +1,6 @@
 package sample.camel;
 
 import lombok.Getter;
-import lombok.ToString;
 
 @Getter
 public class FullLine extends IncompleteLine {
@@ -16,7 +15,7 @@ public class FullLine extends IncompleteLine {
     public String toString() {
         return "FullLine{" +
                 "line='" + line + '\'' +
-                "value='" + value + '\'' +
+                ", value='" + value + '\'' +
                 '}';
     }
 }
