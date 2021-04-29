@@ -6,6 +6,8 @@ import org.apache.camel.Body;
 
 import java.util.function.Consumer;
 
+import static sample.camel.AppUtils.sleepSafe;
+
 @Slf4j
 @RequiredArgsConstructor
 public class SlowService implements Consumer<Object> {
@@ -17,15 +19,8 @@ public class SlowService implements Consumer<Object> {
 
     @Override
     public void accept(@Body Object body) {
-        try {
-            Thread.sleep(millis);
-            log.debug("\nmillis = {}, thread = {}, {} consumer processed:\n{}",
-                    millis,
-                    Thread.currentThread().getName(),
-                    millis,
-                    body);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        sleepSafe(millis);
+        log.debug("\nmillis = {}, thread = {}, processing:\n{}",
+                millis, Thread.currentThread().getName(), body);
     }
 }

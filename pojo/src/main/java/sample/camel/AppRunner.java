@@ -16,7 +16,7 @@ public class AppRunner implements ApplicationRunner {
     private final ProducerTemplate template;
 
     @Override
-    public void run(ApplicationArguments args) throws Exception {
-        template.sendBody("direct:start", lines(100));
+    public void run(ApplicationArguments args) {
+        template.sendBody("direct:start", lines(80));
     }
 }
