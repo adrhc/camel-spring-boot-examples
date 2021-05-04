@@ -53,66 +53,104 @@ public class NumberRoute extends RouteBuilder {
     }
 
     /**
-     * closest approach
+     * closest approach (with Executors.newFixedThreadPool)
+     * removed commented and detailed logs
      */
     @Override
     public void configure() {
         from("direct:start")
                 .log("\n[threadName = ${threadName}] from direct-start:\n${body.length}")
 
-                // split by \n for getting all chunks
+                // split by \n for getting the chunks
+                .split().tokenize("\n", CHUNK_SIZE).streaming()
+                .setProperty("chunk", simple("${exchangeProperty.CamelSplitIndex}"))
+
+                // split by \n for getting lines in chunk
+                .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
+                .executorService(Executors.newFixedThreadPool(THREADS))
+                .setProperty("line", simple("${exchangeProperty.CamelSplitIndex}")) //line index
+
+                // split by comma for getting CSV parts
+                .split(body().tokenize(","), flexible().accumulateInCollection(ArrayList.class))
+                .setProperty("info", simple("CSV part at position ${exchangeProperty.CamelSplitIndex}"))
+                .end() // split by comma for getting CSV parts
+
+                // choice: convert lines to FullLine or IncompleteLine
+                .choice()
+                .when(simple("${body.size()} > 1"))
+                .setBody(spel("#{new sample.camel.FullLine(body[1], body[0])}"))
+                .endChoice() // end of when(simple("${body.size()} > 1"))
+                .otherwise()
+                .setBody(spel("#{new sample.camel.IncompleteLine(body[0])}"))
+                .end() // end of choice
+
+                .end() // split by \n for getting lines in chunk
+
+                // chunk's lines grouped (Array lines each containing a POJO)
+                .removeProperty("line")
+                .setProperty("info", simple("${body.size()} records in chunk ${exchangeProperty.chunk}"))
+                .removeProperty("chunk")
+                .to(DEBUG_ALL)
+
+                .end() // split by \n for getting the chunks
+
+                .setProperty("info", constant("all chunks concatenated"))
+                .to(DEBUG_ALL);
+    }
+
+    /**
+     * closest approach (with Executors.newFixedThreadPool)
+     */
+    public void configure7() {
+        from("direct:start")
+                .log("\n[threadName = ${threadName}] from direct-start:\n${body.length}")
+
+                // split by \n for getting the chunks
                 .split().tokenize("\n", CHUNK_SIZE).streaming()
                 .setProperty("chunk", simple("${exchangeProperty.CamelSplitIndex}"))
                 .log("\n[threadName = ${threadName}] chunk ${exchangeProperty.CamelSplitIndex} lines:\n${body}")
 
                 // split by \n for getting lines in chunk
                 .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
-                .executorService(() -> Executors.newFixedThreadPool(THREADS))
-                .setProperty("line", simple("${exchangeProperty.CamelSplitIndex}"))
+                .executorService(Executors.newFixedThreadPool(THREADS))
+                .setProperty("line", simple("${exchangeProperty.CamelSplitIndex}")) //line index
 
 //                .unmarshal().bindy(BindyType.Csv, Person.class)
 
-                .setProperty("type", simple("line index ${exchangeProperty.CamelSplitIndex}"))
                 .to(DEBUG_ALL)
 
-                // split by , for getting CSV parts
+                // split by comma for getting CSV parts
                 .split(body().tokenize(","), flexible().accumulateInCollection(ArrayList.class))
-
-                .setProperty("type", simple("CSV part index ${exchangeProperty.CamelSplitIndex}"))
+                .setProperty("info", simple("CSV part at position ${exchangeProperty.CamelSplitIndex}"))
                 .to(DEBUG_ALL)
-                .end() // split by , for getting CSV parts
+                .end() // split by comma for getting CSV parts
 
 //                .delay(4000)
-
 //                .log("body.size: ${body.size()} full")
+
+                // choice: convert lines to FullLine or IncompleteLine
                 .choice()
                 .when(simple("${body.size()} > 1"))
-//                .setProperty("choice", spel("#{body[0]}: #{body[1]}"))
                 .setBody(spel("#{new sample.camel.FullLine(body[1], body[0])}"))
+                .endChoice() // end of when(simple("${body.size()} > 1"))
                 .otherwise()
-//                .setProperty("choice", spel("#{body[0]}: NULL}"))
                 .setBody(spel("#{new sample.camel.IncompleteLine(body[0])}"))
-                .end() // choice on body.size
-
-                // line converted to POJO
-                .setProperty("type", spel("line converted to #{body.getClass().getName()}"))
-                .to(DEBUG_ALL)
-//                .removeProperty("choice")
+                .end() // end of choice
 
                 .end() // split by \n for getting lines in chunk
 
                 // chunk's lines grouped (Array lines each containing a POJO)
                 .removeProperty("line")
-                .setProperty("type", simple("${body.size()} lines from chunk grouped"))
+                .setProperty("info", simple("${body.size()} records in chunk ${exchangeProperty.chunk}"))
                 .to(DEBUG_ALL)
 
                 /*.process(exchange -> {
                     Exchange ex = exchange;
                 })*/
 
-                .end() // split by \n for getting all chunks
+                .end() // split by \n for getting the chunks
 
-                .setProperty("type", constant("all chunks concatenated"))
+                .setProperty("info", constant("all chunks concatenated"))
                 .to(DEBUG_ALL);
     }
 
@@ -123,7 +161,7 @@ public class NumberRoute extends RouteBuilder {
         from("direct:start")
                 .log("\n[threadName = ${threadName}] from direct-start:\n${body.length}")
 
-                // split by \n for getting all chunks
+                // split by \n for getting the chunks
                 .split().tokenize("\n", CHUNK_SIZE).streaming()
                 .log("\n[threadName = ${threadName}] chunk ${exchangeProperty.CamelSplitIndex} lines:\n${body}")
 
@@ -159,7 +197,7 @@ public class NumberRoute extends RouteBuilder {
                 .setProperty("type", constant(CHUNK_SIZE + " lines from chunk grouped"))
                 .to(DEBUG_ALL)
 
-                .end() // split by \n for getting all chunks
+                .end() // split by \n for getting the chunks
 
                 .setProperty("type", constant("all chunks concatenated"))
                 .to(DEBUG_ALL);
@@ -172,6 +210,11 @@ public class NumberRoute extends RouteBuilder {
                 .log("\n[threadName = ${threadName}] lines in chunk ${exchangeProperty.CamelSplitIndex}:\n${body}")
                 .to("seda:csv?blockWhenFull=true");
 
+        from("seda:csv?queue=#synchronousQueue&pollTimeout=1000")
+                .process((exchange) -> {
+                    producer.send("direct:lines", exchange);
+                });
+
         from("direct:lines")
                 .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
                 .executorService(() -> Executors.newFixedThreadPool(THREADS))
@@ -183,11 +226,6 @@ public class NumberRoute extends RouteBuilder {
                 .bean(createSlowService(2000))
                 .end()
                 .to("log:DEBUG?multiline=true");
-
-        from("seda:csv?queue=#synchronousQueue&pollTimeout=1000")
-                .process((exchange) -> {
-                    producer.send("direct:lines", exchange);
-                });
 
 //        from("seda:csv?pollTimeout=1000&waitForTaskToComplete=Always&timeout=0").to("direct:lines");
 //        from("seda:csv?pollTimeout=1000").to("direct:lines");

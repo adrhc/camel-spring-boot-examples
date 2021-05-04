@@ -15,7 +15,7 @@ public class AppUtils {
 
     public static String lines(int count) {
         return IntStream.rangeClosed(1, count).boxed()
-                .map(i -> (i % 2 == 0 ? LINE : SHORT_LINE).apply(i))
+                .map(i -> (i % 2 == 1 ? LINE : SHORT_LINE).apply(i))
                 .collect(Collectors.joining());
     }
 
