@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 
@@ -52,12 +53,54 @@ public class NumberRoute extends RouteBuilder {
                 .setIgnoreEmptyLines(true);
     }
 
+    private static IncompleteLine csvPartsToLine(List<String> parts) {
+        return parts.size() > 1 ?
+                new FullLine(parts.get(0), Double.valueOf(parts.get(1))) :
+                new IncompleteLine(Double.valueOf(parts.get(0)));
+    }
+
+    /**
+     * closest approach (with Executors.newFixedThreadPool)
+     * using csvPartsToLine(List<String>) instead of Camel's choice()
+     */
+    public void configure() {
+        from("direct:start")
+                .log("\n[threadName = ${threadName}] from direct-start:\n${body.length}")
+
+                // split by \n for getting the chunks
+                .split().tokenize("\n", CHUNK_SIZE).streaming()
+                .setProperty("chunk", simple("${exchangeProperty.CamelSplitIndex}"))
+
+                // split by \n for getting lines in chunk
+                .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
+                .executorService(Executors.newFixedThreadPool(THREADS))
+                .setProperty("line", simple("${exchangeProperty.CamelSplitIndex}")) //line index
+
+                // split by comma for getting CSV parts
+                .split(body().tokenize(","), flexible().accumulateInCollection(ArrayList.class))
+                .setProperty("info", simple("CSV part at position ${exchangeProperty.CamelSplitIndex}"))
+                .end() // split by comma for getting CSV parts
+
+                .setBody(exchange -> csvPartsToLine(exchange.getIn().getBody(List.class)))
+
+                .end() // split by \n for getting lines in chunk
+
+                .removeProperty("line")
+                .setProperty("info", simple("${body.size()} records in chunk ${exchangeProperty.chunk}"))
+                .removeProperty("chunk")
+                .to(DEBUG_ALL) // grouped chunk's lines (Array of FullLine or IncompleteLine)
+
+                .end() // split by \n for getting the chunks
+
+                .setProperty("info", constant("all chunks concatenated"))
+                .to(DEBUG_ALL);
+    }
+
     /**
      * closest approach (with Executors.newFixedThreadPool)
      * removed commented and detailed logs
      */
-    @Override
-    public void configure() {
+    public void configure8() {
         from("direct:start")
                 .log("\n[threadName = ${threadName}] from direct-start:\n${body.length}")
 
@@ -78,7 +121,7 @@ public class NumberRoute extends RouteBuilder {
                 // choice: convert lines to FullLine or IncompleteLine
                 .choice()
                 .when(simple("${body.size()} > 1"))
-                .setBody(spel("#{new sample.camel.FullLine(body[1], body[0])}"))
+                .setBody(spel("#{new sample.camel.FullLine(body[0], body[1])}"))
                 .endChoice() // end of when(simple("${body.size()} > 1"))
                 .otherwise()
                 .setBody(spel("#{new sample.camel.IncompleteLine(body[0])}"))
@@ -131,7 +174,7 @@ public class NumberRoute extends RouteBuilder {
                 // choice: convert lines to FullLine or IncompleteLine
                 .choice()
                 .when(simple("${body.size()} > 1"))
-                .setBody(spel("#{new sample.camel.FullLine(body[1], body[0])}"))
+                .setBody(spel("#{new sample.camel.FullLine(body[0], body[1])}"))
                 .endChoice() // end of when(simple("${body.size()} > 1"))
                 .otherwise()
                 .setBody(spel("#{new sample.camel.IncompleteLine(body[0])}"))

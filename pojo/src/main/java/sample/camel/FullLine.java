@@ -6,7 +6,7 @@ import lombok.Getter;
 public class FullLine extends IncompleteLine {
     private final String line;
 
-    public FullLine(Double value, String line) {
+    public FullLine(String line, Double value) {
         super(value);
         this.line = line;
     }
