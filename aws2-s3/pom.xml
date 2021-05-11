@@ -32,6 +32,9 @@
     <properties>
         <category>Cloud</category>
         <spring.boot-version>${spring-boot-version}</spring.boot-version>
+
+        <!--<maven.compiler.source>${jdk.version}</maven.compiler.source>
+        <maven.compiler.target>${jdk.version}</maven.compiler.target>-->
     </properties>
 
     <!-- Spring-Boot and Camel BOM -->
@@ -81,6 +84,18 @@
                     </execution>
                 </executions>
             </plugin>
+            <!--<plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>6.1.6</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>-->
         </plugins>
     </build>
 
