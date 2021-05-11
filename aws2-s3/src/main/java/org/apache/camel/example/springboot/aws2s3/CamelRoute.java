@@ -16,16 +16,39 @@
  */
 package org.apache.camel.example.springboot.aws2s3;
 
+import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.aws2.s3.AWS2S3Constants;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CamelRoute extends RouteBuilder {
+	private static final String DEBUG_ALL = "log:DEBUG?showAll=true&multiline=true&skipBodyLineSeparator=false";
+	private static final String ERROR_ALL = "log:ERROR?showAll=true&multiline=true&skipBodyLineSeparator=false";
+	private static final String ERROR_KEY = "joke 1.txt";
 
-    @Override
-    public void configure() throws Exception {
+	@Override
+	public void configure() {
+		errorHandler(deadLetterChannel("direct:bad-jokes").useOriginalMessage()
+				.maximumRedeliveries(2).redeliveryDelay(5000));
 
-      from("aws2-s3://{{bucketName}}")
-                .log("Received body: ${body}");
-    }
+		from("direct:bad-jokes")
+//				.log("\nERROR on ${header.CamelAwsS3BucketName}/${header.CamelAwsS3Key}")
+				.setHeader(AWS2S3Constants.BUCKET_DESTINATION_NAME, simple("${header.CamelAwsS3BucketName}"))
+				.setHeader(AWS2S3Constants.DESTINATION_KEY, simple("bad/${header.CamelAwsS3Key}"))
+				.to(ERROR_ALL)
+				.to("aws2-s3://{{bucketName}}?operation=copyObject");
+
+		from("aws2-s3://{{bucketName}}?delay=1000&prefix=jokes")
+				.to(DEBUG_ALL)
+//				.log("\n${header.CamelAwsS3BucketName}/${header.CamelAwsS3Key}:\n${body}")
+				.process(ex -> {
+					Message message = ex.getIn();
+					String key = (String) message.getHeader(AWS2S3Constants.KEY);
+					if (key.contains(ERROR_KEY)) {
+						throw new RuntimeException("bad file");
+					}
+				});
+//				.log("Received body:\n${body}");
+	}
 }
