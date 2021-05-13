@@ -16,19 +16,86 @@
  */
 package org.apache.camel.example.springboot.aws2s3;
 
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.aws2.s3.AWS2S3Constants;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
+/**
+ * http://localhost:9000/minio
+ */
 @Component
+@Slf4j
+@Setter
 public class CamelRoute extends RouteBuilder {
 	private static final String DEBUG_ALL = "log:DEBUG?showAll=true&multiline=true&skipBodyLineSeparator=false";
+	private static final String DEBUG_NO_HEADERS = "log:DEBUG?multiline=true&skipBodyLineSeparator=false&showExchangePattern=false&showProperties=true";
 	private static final String ERROR_ALL = "log:ERROR?showAll=true&multiline=true&skipBodyLineSeparator=false";
 	private static final String ERROR_KEY = "joke 1.txt";
+	@Value("${bucketName}")
+	private String bucketName;
 
+	/**
+	 * reading (using request builder) the list of files (names) and splitting to process 1 by 1
+	 * splitting each files lines (all at once per file but not streaming): processing line by line
+	 */
 	@Override
 	public void configure() {
+		from("timer:number?period=30000")
+				.setBody(ex -> ListObjectsRequest.builder().bucket(bucketName).prefix("jokes").build())
+				.to("aws2-s3://{{bucketName}}?operation=listObjects&pojoRequest=true")
+				.to(DEBUG_NO_HEADERS)
+				.split(body())
+				.log("\n[timer:number] ${threadName}:\nkey = ${body.key}, size = ${body.size}")
+				.to("direct:files");
+
+		from("direct:files")
+				.delay(5000)
+				.setHeader(AWS2S3Constants.KEY, simple("${body.key}"))
+				.to("aws2-s3://{{bucketName}}?operation=getObject")
+				.setBody(simple("${bodyAs(String)}"))
+//				.to(DEBUG_ALL)
+				.log("\n[direct:files1] ${threadName}:\nkey = ${headers.CamelAwsS3Key}, body:\n${body}")
+				.split().tokenize("\n")
+				.log("\n[direct:files2] ${threadName}:\nkey = ${headers.CamelAwsS3Key}, line: ${body}");
+	}
+
+	/**
+	 * reading (using request builder) the list of files (names) and splitting to process 1 by 1
+	 */
+	public void configure3() {
+		from("timer:number?period=10000")
+				.setBody(ex -> ListObjectsRequest.builder().bucket(bucketName).build())
+				.to("aws2-s3://{{bucketName}}?operation=listObjects&pojoRequest=true")
+				.to(DEBUG_NO_HEADERS)
+				.split(body())
+				.log("\n[${threadName}] key = ${body.key}, size = ${body.size}");
+	}
+
+	/**
+	 * reading the list of files (names) and splitting to process 1 by 1
+	 */
+	public void configure2() {
+		from("timer:number?period=10000")
+				.to("aws2-s3://{{bucketName}}?operation=listObjects")
+				.to(DEBUG_NO_HEADERS)
+				.split(body())
+				.to(DEBUG_ALL)
+				.process(exchange -> {
+					S3Object s3Object = exchange.getIn().getBody(S3Object.class);
+					log.debug("\nkey = {}, size = {}", s3Object.key(), s3Object.size());
+				});
+	}
+
+	/**
+	 * reading all files (+ their content) then processing 1 by 1
+	 */
+	public void configure1() {
 		errorHandler(deadLetterChannel("direct:bad-jokes").useOriginalMessage()
 				.maximumRedeliveries(2).redeliveryDelay(5000));
 
