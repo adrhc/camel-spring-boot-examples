@@ -12,11 +12,11 @@ import static sample.camel.AppUtils.lines;
 @Component
 @RequiredArgsConstructor
 public class AppRunner implements ApplicationRunner {
-    @Autowired
-    private final ProducerTemplate template;
+	@Autowired
+	private final ProducerTemplate template;
 
-    @Override
-    public void run(ApplicationArguments args) {
-        template.sendBody("direct:start", lines(40));
-    }
+	@Override
+	public void run(ApplicationArguments args) {
+		template.sendBody("direct:start", lines(40));
+	}
 }
