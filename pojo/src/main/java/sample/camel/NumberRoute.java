@@ -210,7 +210,7 @@ public class NumberRoute extends RouteBuilder {
 
                 // split by \n for getting lines in chunk
                 .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
-                .executorService(() -> Executors.newFixedThreadPool(THREADS))
+                .executorService(Executors.newFixedThreadPool(THREADS))
 
 //                .unmarshal().bindy(BindyType.Csv, Person.class)
 
@@ -260,7 +260,7 @@ public class NumberRoute extends RouteBuilder {
 
         from("direct:lines")
                 .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
-                .executorService(() -> Executors.newFixedThreadPool(THREADS))
+                .executorService(Executors.newFixedThreadPool(THREADS))
                 /*.process(exchange -> {
                     sleepSafe(2000);
                     log.debug("\nmillis = 2000, thread = {}, processing a single line:\n{}",
@@ -293,7 +293,7 @@ public class NumberRoute extends RouteBuilder {
 
         from("direct:lines")
                 .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
-                .executorService(() -> Executors.newFixedThreadPool(THREADS))
+                .executorService(Executors.newFixedThreadPool(THREADS))
                 .bean(createSlowService(2000))
                 .end()
                 .to("log:DEBUG?multiline=true");
@@ -310,7 +310,7 @@ public class NumberRoute extends RouteBuilder {
         from("seda:csv?pollTimeout=2000")
                 .startupOrder(2)
                 .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
-                .executorService(() -> Executors.newFixedThreadPool(THREADS))
+                .executorService(Executors.newFixedThreadPool(THREADS))
                 .bean(createSlowService(4000))
                 .end()
                 .to("log:DEBUG?multiline=true");
@@ -325,7 +325,7 @@ public class NumberRoute extends RouteBuilder {
                 .split().tokenize("\n", 10).streaming()
                 .log("\n[threadName = ${threadName}] lines in chunk ${exchangeProperty.CamelSplitIndex}:\n${body}")
                 .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
-                .executorService(() -> Executors.newFixedThreadPool(THREADS))
+                .executorService(Executors.newFixedThreadPool(THREADS))
                 .unmarshal(csv())
 //                .to("log:DEBUG?multiline=true&showHeaders=true&showProperties=true")
 //                .setBody(spel("#{body[0]}"))
@@ -370,7 +370,7 @@ public class NumberRoute extends RouteBuilder {
 //                .log("[threadName = ${threadName}] split will receive:\n${body}")
 //                .split(body(), "\n")
                 .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
-                .executorService(() -> Executors.newFixedThreadPool(2))
+                .executorService(Executors.newFixedThreadPool(2))
 //                .log("[threadName = ${threadName}] slow consumer will receive:\n${body}")
                 .bean(createSlowService(8000))
                 .end()
