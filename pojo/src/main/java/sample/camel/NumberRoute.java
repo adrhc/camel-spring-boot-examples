@@ -254,9 +254,7 @@ public class NumberRoute extends RouteBuilder {
                 .to("seda:csv?blockWhenFull=true");
 
         from("seda:csv?queue=#synchronousQueue&pollTimeout=1000")
-                .process((exchange) -> {
-                    producer.send("direct:lines", exchange);
-                });
+                .process((exchange) -> producer.send("direct:lines", exchange));
 
         from("direct:lines")
                 .split(body().tokenize("\n"), flexible().accumulateInCollection(ArrayList.class))
