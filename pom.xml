@@ -25,7 +25,7 @@
 	<parent>
 		<groupId>org.apache.camel.springboot</groupId>
 		<artifactId>spring-boot</artifactId>
-		<version>3.10.0-SNAPSHOT</version>
+		<version>3.16.0-SNAPSHOT</version>
 	</parent>
 
 	<groupId>org.apache.camel.springboot.example</groupId>
@@ -41,8 +41,10 @@
 		<module>amqp</module>
 		<module>apm-opentracing</module>
 		<module>arangodb</module>
+		<module>aws-secrets-manager</module>
 		<module>aws2-s3</module>
 		<module>clustered-route-controller</module>
+		<module>dynamic-router-eip</module>
 		<module>fhir</module>
 		<module>fhir-auth-tx</module>
 		<module>geocoder</module>
@@ -54,10 +56,12 @@
 		<module>jira</module>
 		<module>kafka-avro</module>
 		<module>kafka-offsetrepository</module>
+		<module>kamelet-chucknorris</module>
 		<module>load-balancer-eip</module>
 		<module>master</module>
 		<module>metrics</module>
 		<module>opentracing</module>
+		<module>paho-mqtt5-shared-subscriptions</module>
 		<module>pojo</module>
 		<module>rabbitmq</module>
 		<module>reactive-streams</module>
@@ -68,7 +72,11 @@
 		<module>rest-swagger-simple</module>
 		<module>rest-openapi</module>
 		<module>rest-openapi-simple</module>
+		<module>rest-openapi-springdoc</module>
 		<module>routetemplate</module>
+		<module>routetemplate-xml</module>
+		<module>route-reload</module>
+		<module>routes-configuration</module>
 		<module>servicecall</module>
 		<module>supervising-route-controller</module>
 		<module>twitter-salesforce</module>
@@ -77,15 +85,17 @@
 		<module>validator</module>
 		<module>webhook</module>
 		<module>xml</module>
+		<module>xml-import</module>
 		<module>zipkin</module>
 		<module>strimzi</module>
+		<module>quartz</module>
 		<module>splitter-eip</module>
 		<module>widget-gadget</module>
 		<module>unit-testing</module>
-	</modules>
+    </modules>
 
 	<properties>
-		<camel-version>3.10.0-SNAPSHOT</camel-version>
+		<camel-version>3.16.0-SNAPSHOT</camel-version>
 		<skip.starting.camel.context>false</skip.starting.camel.context>
 		<javax.servlet.api.version>4.0.1</javax.servlet.api.version>
 		<fabric8-maven-plugin-version>4.4.1</fabric8-maven-plugin-version>

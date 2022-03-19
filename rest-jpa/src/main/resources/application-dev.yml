@@ -19,7 +19,6 @@ camel:
   springboot:
     # The Camel context name
     name: CamelRestJpa
-  
   servlet:
     mapping:
       contextPath: /camel-rest-jpa/*
@@ -34,6 +33,8 @@ spring:
   jpa:
     database: h2
     database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
 
 # The application configuration properties
 example:
